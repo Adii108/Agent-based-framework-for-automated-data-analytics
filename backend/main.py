@@ -25,6 +25,10 @@ class QueryRequest(BaseModel):
     sql: str
 
 
+class ExplainRequest(BaseModel):
+    customer_id: str
+
+
 # ── Application state (in-memory, single-user for now) ────────────
 
 _app_state: dict = {
@@ -53,7 +57,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="AutoAnalytics",
     description="Agent Based Framework for Data Analytics -- E-commerce analytics pipeline",
-    version="0.2.0",
+    version="0.3.0",
     lifespan=lifespan,
 )
 
@@ -72,7 +76,7 @@ app.add_middleware(
 @app.get("/health")
 async def health():
     """Health check."""
-    return {"status": "healthy", "version": "0.2.0"}
+    return {"status": "healthy", "version": "0.3.0"}
 
 
 @app.post("/upload")
@@ -93,7 +97,7 @@ async def upload_dataset(file: UploadFile = File(...)):
         content = await file.read()
         f.write(content)
 
-    # Run the LangGraph data pipeline
+    # Run the LangGraph data pipeline (Part 1 + Part 3)
     try:
         pipeline = get_pipeline()
         result = pipeline.invoke({
@@ -126,8 +130,9 @@ async def upload_dataset(file: UploadFile = File(...)):
     schema = result.get("schema_info", {})
     cleaning = result.get("cleaning_report", {})
     eda = result.get("eda_results", {})
+    prediction = result.get("prediction_results", {})
 
-    return {
+    response = {
         "status": "success" if not errors else "completed_with_errors",
         "dataset": file.filename,
         "schema": {
@@ -143,8 +148,29 @@ async def upload_dataset(file: UploadFile = File(...)):
         },
         "database": load_info,
         "eda_available": bool(eda),
+        "predictions_available": bool(prediction),
         "errors": errors,
     }
+
+    # Add prediction summary
+    churn = prediction.get("churn", {})
+    if churn and "error" not in churn:
+        response["churn_summary"] = {
+            "total_customers": churn.get("total_customers"),
+            "predicted_churned": churn.get("predicted_churned"),
+            "model_accuracy": churn.get("model_accuracy"),
+        }
+
+    forecast = prediction.get("forecast", {})
+    if forecast and "error" not in forecast:
+        summary = forecast.get("summary", {})
+        response["forecast_summary"] = {
+            "trend": summary.get("trend"),
+            "forecast_avg": summary.get("forecast_avg"),
+            "last_30_days_avg": summary.get("last_30_days_avg"),
+        }
+
+    return response
 
 
 @app.get("/dataset")
@@ -181,7 +207,8 @@ async def analyze():
 async def chat(request: ChatRequest):
     """Conversational analytics endpoint.
 
-    Classifies intent, routes to SQL or general chat, returns structured response.
+    Classifies intent, routes to SQL, prediction, insight, recommendation,
+    explain, or general chat. Returns structured response.
     """
     if not _app_state.get("pipeline_results"):
         raise HTTPException(
@@ -191,6 +218,7 @@ async def chat(request: ChatRequest):
 
     db_path = _app_state["db_path"]
     history = _app_state.get("conversation_history", [])
+    pipeline_results = _app_state["pipeline_results"]
 
     try:
         chat_graph = get_chat_graph()
@@ -199,6 +227,12 @@ async def chat(request: ChatRequest):
             "db_path": db_path,
             "conversation_history": history,
             "errors": [],
+            # Pass Part 3 cached results so chat nodes can use them
+            "prediction_results": pipeline_results.get("prediction_results", {}),
+            "xai_results": pipeline_results.get("xai_results", {}),
+            "eda_results": pipeline_results.get("eda_results", {}),
+            "insight_results": pipeline_results.get("insight_results", {}),
+            "recommendation_results": pipeline_results.get("recommendation_results", {}),
         })
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
@@ -241,6 +275,146 @@ async def direct_query(request: QueryRequest):
     return result
 
 
+# ── Part 3 Endpoints ─────────────────────────────────────────────
+
+
+@app.get("/predict")
+async def get_predictions():
+    """Return churn predictions and revenue forecast."""
+    results = _app_state.get("pipeline_results")
+    if not results:
+        raise HTTPException(status_code=404, detail="No dataset loaded. Upload a file first.")
+
+    prediction = results.get("prediction_results", {})
+    if not prediction:
+        raise HTTPException(status_code=404, detail="No predictions available. Analyze a dataset first.")
+
+    # Remove non-serializable objects
+    safe_prediction = {}
+
+    churn = prediction.get("churn", {})
+    if churn:
+        safe_prediction["churn"] = {
+            k: v for k, v in churn.items()
+            if k not in ("model", "feature_data")
+        }
+
+    forecast = prediction.get("forecast", {})
+    if forecast:
+        safe_prediction["forecast"] = forecast
+
+    return safe_prediction
+
+
+@app.get("/predict/churn")
+async def get_churn_predictions():
+    """Return churn predictions only."""
+    results = _app_state.get("pipeline_results")
+    if not results:
+        raise HTTPException(status_code=404, detail="No dataset loaded. Upload a file first.")
+
+    prediction = results.get("prediction_results", {})
+    churn = prediction.get("churn", {})
+
+    if not churn:
+        raise HTTPException(status_code=404, detail="No churn predictions available.")
+
+    return {
+        k: v for k, v in churn.items()
+        if k not in ("model", "feature_data")
+    }
+
+
+@app.get("/predict/forecast")
+async def get_forecast():
+    """Return revenue forecast only."""
+    results = _app_state.get("pipeline_results")
+    if not results:
+        raise HTTPException(status_code=404, detail="No dataset loaded. Upload a file first.")
+
+    prediction = results.get("prediction_results", {})
+    forecast = prediction.get("forecast", {})
+
+    if not forecast:
+        raise HTTPException(status_code=404, detail="No forecast available.")
+
+    return forecast
+
+
+@app.post("/explain")
+async def explain_customer(request: ExplainRequest):
+    """Explain why a specific customer is predicted to churn (SHAP)."""
+    results = _app_state.get("pipeline_results")
+    if not results:
+        raise HTTPException(status_code=404, detail="No dataset loaded. Upload a file first.")
+
+    prediction = results.get("prediction_results", {})
+    xai = results.get("xai_results", {})
+
+    churn = prediction.get("churn", {})
+    shap_results = xai.get("shap", {})
+
+    if not churn or "error" in churn:
+        raise HTTPException(status_code=404, detail="No churn model available.")
+    if not shap_results or "error" in shap_results:
+        raise HTTPException(status_code=404, detail="No SHAP explanations available.")
+
+    from backend.tools.explainability import explain_customer_churn
+    explanation = explain_customer_churn(request.customer_id, churn, shap_results)
+
+    if "error" in explanation:
+        raise HTTPException(status_code=404, detail=explanation["error"])
+
+    return explanation
+
+
+@app.get("/explain/global")
+async def get_global_importance():
+    """Return global SHAP feature importance for the churn model."""
+    results = _app_state.get("pipeline_results")
+    if not results:
+        raise HTTPException(status_code=404, detail="No dataset loaded. Upload a file first.")
+
+    xai = results.get("xai_results", {})
+    shap_results = xai.get("shap", {})
+
+    if not shap_results or "error" in shap_results:
+        raise HTTPException(status_code=404, detail="No SHAP data available.")
+
+    return {
+        "global_importance": shap_results.get("global_importance", []),
+        "base_value": shap_results.get("base_value"),
+    }
+
+
+@app.get("/insights")
+async def get_insights():
+    """Return LLM-generated business insights."""
+    results = _app_state.get("pipeline_results")
+    if not results:
+        raise HTTPException(status_code=404, detail="No dataset loaded. Upload a file first.")
+
+    insights = results.get("insight_results", {})
+    if not insights:
+        raise HTTPException(status_code=404, detail="No insights available.")
+
+    return insights
+
+
+@app.get("/recommendations")
+async def get_recommendations():
+    """Return LLM-generated business recommendations."""
+    results = _app_state.get("pipeline_results")
+    if not results:
+        raise HTTPException(status_code=404, detail="No dataset loaded. Upload a file first.")
+
+    recs = results.get("recommendation_results", {})
+    if not recs:
+        raise HTTPException(status_code=404, detail="No recommendations available.")
+
+    return recs
+
+
 @app.get("/results")
 async def get_results():
     """Return latest pipeline results (everything)."""
@@ -248,12 +422,29 @@ async def get_results():
     if not results:
         raise HTTPException(status_code=404, detail="No dataset loaded. Upload a file first.")
 
-    # Don't return raw/cleaned/processed data dicts (they're huge)
+    # Don't return raw/cleaned/processed data dicts or non-serializable objects
+    prediction = results.get("prediction_results", {})
+    safe_prediction = {}
+    if prediction:
+        churn = prediction.get("churn", {})
+        if churn:
+            safe_prediction["churn"] = {
+                k: v for k, v in churn.items()
+                if k not in ("model", "feature_data")
+            }
+        forecast = prediction.get("forecast", {})
+        if forecast:
+            safe_prediction["forecast"] = forecast
+
     return {
         "schema_info": results.get("schema_info", {}),
         "cleaning_report": results.get("cleaning_report", {}),
         "preprocessing_report": results.get("preprocessing_report", {}),
         "eda_results": results.get("eda_results", {}),
+        "prediction_results": safe_prediction,
+        "xai_results": results.get("xai_results", {}),
+        "insight_results": results.get("insight_results", {}),
+        "recommendation_results": results.get("recommendation_results", {}),
         "errors": results.get("errors", []),
     }
 
