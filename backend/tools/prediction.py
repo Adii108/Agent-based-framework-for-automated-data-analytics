@@ -89,7 +89,7 @@ def predict_churn(df: pd.DataFrame) -> dict:
         X, y, test_size=0.2, random_state=42, stratify=y
     )
 
-    model = LogisticRegression(max_iter=1000, random_state=42)
+    model = LogisticRegression(max_iter=5000, random_state=42)
     model.fit(X_train, y_train)
 
     # Evaluate
@@ -146,8 +146,6 @@ def generate_forecast(
             "summary": {"last_30_days_avg": ..., "forecast_avg": ..., "trend": ...}
         }
     """
-    from statsmodels.tsa.arima.model import ARIMA
-
     df = df.copy()
     df[date_col] = pd.to_datetime(df[date_col], errors="coerce")
     df = df.dropna(subset=[date_col])
@@ -166,24 +164,46 @@ def generate_forecast(
     if len(daily) < 30:
         return {"error": "Not enough data points for forecasting (need at least 30 days)"}
 
-    # Fit ARIMA — use a simple order, suppress warnings
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-        try:
-            model = ARIMA(daily["value"], order=(5, 1, 2))
-            fitted = model.fit()
-        except Exception:
-            # Fallback to simpler model
+    fitted = None
+    try:
+        from statsmodels.tsa.arima.model import ARIMA
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
             try:
-                model = ARIMA(daily["value"], order=(1, 1, 1))
+                model = ARIMA(daily["value"], order=(5, 1, 2))
                 fitted = model.fit()
-            except Exception as e:
-                return {"error": f"ARIMA fitting failed: {str(e)}"}
+            except Exception:
+                try:
+                    model = ARIMA(daily["value"], order=(1, 1, 1))
+                    fitted = model.fit()
+                except Exception:
+                    fitted = None
+    except Exception:
+        fitted = None
 
-    # Forecast
-    forecast_result = fitted.get_forecast(steps=periods)
-    forecast_mean = forecast_result.predicted_mean
-    forecast_ci = forecast_result.conf_int()
+    if fitted is not None:
+        forecast_result = fitted.get_forecast(steps=periods)
+        forecast_mean = forecast_result.predicted_mean
+        forecast_ci = forecast_result.conf_int()
+        order_str = str(fitted.specification["order"])
+        aic_val = round(float(fitted.aic), 2)
+    else:
+        # Fallback linear / trend regression if ARIMA is unavailable
+        x = np.arange(len(daily))
+        y = daily["value"].values
+        slope, intercept = np.polyfit(x, y, 1)
+        future_x = np.arange(len(daily), len(daily) + periods)
+        pred_vals = np.maximum(0, slope * future_x + intercept)
+        res_std = np.std(y - (slope * x + intercept))
+        
+        future_dates = pd.date_range(start=daily.index.max() + pd.Timedelta(days=1), periods=periods, freq="D")
+        forecast_mean = pd.Series(pred_vals, index=future_dates)
+        forecast_ci = pd.DataFrame({
+            0: np.maximum(0, pred_vals - 1.96 * res_std),
+            1: np.maximum(0, pred_vals + 1.96 * res_std),
+        }, index=future_dates)
+        order_str = "LinearTrendFallback"
+        aic_val = 0.0
 
     # Historical data (last 90 days for context)
     historical = []
@@ -214,8 +234,8 @@ def generate_forecast(
         "historical": historical,
         "forecast": forecast,
         "model_info": {
-            "order": str(fitted.specification["order"]),
-            "aic": round(float(fitted.aic), 2),
+            "order": order_str,
+            "aic": aic_val,
         },
         "summary": {
             "last_30_days_avg": round(float(last_30), 2),

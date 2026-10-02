@@ -125,6 +125,21 @@ def extract_evidence_from_execution(
                         "confidence_score": 0.95,
                     })
 
+            # Extract any scalar metrics directly present in ret_val
+            for k, v in ret_val.items():
+                if isinstance(v, (int, float, str, bool)) and not any(e["metric_name"] == k for e in evidence_items):
+                    evidence_items.append({
+                        "id": str(uuid.uuid4())[:8],
+                        "claim": f"Calculated '{k}' evaluated to {v}.",
+                        "metric_name": k,
+                        "metric_value": v,
+                        "step_id": step_id,
+                        "code_reference": code_ref,
+                        "artifact_id": None,
+                        "statistical_support": None,
+                        "confidence_score": 0.95,
+                    })
+
         # 2. Process scalar metrics in locals
         for m_name, m_val in metrics.items():
             if isinstance(m_val, (int, float)) and not any(e["metric_name"] == m_name for e in evidence_items):

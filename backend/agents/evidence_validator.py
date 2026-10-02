@@ -66,9 +66,20 @@ def validate_evidence_grounding(
     if task_spec:
         req_metrics = [m.lower() for m in task_spec.get("requested_metrics", [])]
         for m in req_metrics:
-            if m in ("dataset", "records", "general"):
+            if m in ("dataset", "records", "general", "none"):
                 continue
-            matched = any(m in e.get("metric_name", "").lower() or m in e.get("claim", "").lower() for e in evidence)
+            # Check full match or token overlap (e.g. 'revenue' in 'revenue breakdown')
+            m_tokens = [t for t in m.replace("_", " ").split() if len(t) > 2]
+            matched = False
+            for e in evidence:
+                claim_text = e.get("claim", "").lower()
+                metric_text = e.get("metric_name", "").lower()
+                if m in metric_text or m in claim_text:
+                    matched = True
+                    break
+                if any(t in claim_text or t in metric_text for t in m_tokens):
+                    matched = True
+                    break
             if not matched:
                 missing_evidence.append(f"Metric '{m}' requested by user task is missing from evidence graph.")
                 suggested_replanning_goals.append(f"Add step to compute metric '{m}'.")

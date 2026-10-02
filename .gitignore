@@ -22,6 +22,7 @@ env/
 data/uploads/
 data/analytics.db
 data/test_analytics.db
+data/analytical_memory.json
 
 # Keep sample data in repo
 !data/sample_ecommerce.csv

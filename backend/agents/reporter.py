@@ -168,5 +168,7 @@ def reporting_node(state: AutoAnalyticsState) -> dict[str, Any]:
     return {
         "final_report": report,
         "chat_response": markdown_response,
+        "evidence": evidence,
+        "evidence_validation": evidence_val,
         "trace": (state.get("trace") or []) + [trace_entry],
     }
