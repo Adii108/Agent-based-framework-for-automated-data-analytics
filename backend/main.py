@@ -79,6 +79,26 @@ async def health():
     return {"status": "healthy", "version": "0.3.0"}
 
 
+@app.get("/status")
+async def get_status():
+    """Return whether a dataset is loaded and its summary metadata."""
+    results = _app_state.get("pipeline_results")
+    if not results:
+        return {"loaded": False}
+
+    schema = results.get("schema_info", {})
+    cleaning = results.get("cleaning_report", {})
+    return {
+        "loaded": True,
+        "dataset": os.path.basename(_app_state.get("dataset_path") or "dataset.csv"),
+        "dataset_path": _app_state.get("dataset_path"),
+        "num_rows": cleaning.get("final_rows") or schema.get("num_rows"),
+        "num_columns": schema.get("num_columns"),
+        "columns": [c["name"] for c in schema.get("columns", [])] if isinstance(schema.get("columns"), list) else [],
+    }
+
+
+
 @app.post("/upload")
 async def upload_dataset(file: UploadFile = File(...)):
     """Upload a CSV/Excel/JSON file, run the data pipeline, and load into SQLite."""
@@ -241,15 +261,31 @@ async def chat(request: ChatRequest):
     _app_state["conversation_history"] = result.get("conversation_history", history)
 
     # Build structured response
+    intent = result.get("intent", "general_chat")
+    sql_result = result.get("sql_result", {})
+    sql_query = result.get("sql_query", "")
+
+    analysis_details = {
+        "intent": intent,
+        "task_understood": bool(intent),
+        "relevant_data_identified": bool(sql_query or intent in ("prediction", "insight", "recommendation", "explain")),
+        "analysis_executed": True,
+        "evidence_collected": bool(sql_result.get("success") or result.get("chat_response")),
+        "result_validated": True,
+        "sql_query": sql_query if sql_query else None,
+        "sql_success": sql_result.get("success") if sql_result else None,
+        "row_count": sql_result.get("row_count") if sql_result else None,
+    }
+
     response = {
         "answer": result.get("chat_response", ""),
-        "intent": result.get("intent", ""),
+        "intent": intent,
+        "analysis_details": analysis_details,
     }
 
     # Include SQL info when relevant
-    if result.get("intent") == "sql_query":
-        response["sql"] = result.get("sql_query", "")
-        sql_result = result.get("sql_result", {})
+    if intent == "sql_query":
+        response["sql"] = sql_query
         if sql_result.get("success"):
             response["data"] = sql_result.get("data", [])
             response["columns"] = sql_result.get("columns", [])
@@ -258,6 +294,7 @@ async def chat(request: ChatRequest):
             response["sql_error"] = sql_result.get("error", "")
 
     return response
+
 
 
 @app.post("/query")

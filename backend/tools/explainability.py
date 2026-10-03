@@ -18,23 +18,24 @@ def generate_shap_explanation(model, X: pd.DataFrame, feature_names: list[str]) 
             "base_value": float
         }
     """
-    import shap
+    X_array = X.values if isinstance(X, pd.DataFrame) else np.array(X)
 
-    X_array = X.values if isinstance(X, pd.DataFrame) else X
-
-    try:
-        # Use LinearExplainer for logistic regression (fast and exact)
-        explainer = shap.LinearExplainer(model, X_array)
-        shap_values = explainer.shap_values(X_array)
-        base_value = float(explainer.expected_value)
-    except Exception:
-        # Fallback: coefficient-based approximation
-        if hasattr(model, "coef_"):
-            coefs = model.coef_[0] if len(model.coef_.shape) > 1 else model.coef_
-            shap_values = X_array * coefs
-            base_value = float(model.intercept_[0]) if hasattr(model.intercept_, "__len__") else float(model.intercept_)
-        else:
+    if hasattr(model, "coef_"):
+        coefs = model.coef_[0] if len(model.coef_.shape) > 1 else model.coef_
+        mean_X = np.mean(X_array, axis=0)
+        # Exact Shapley values for linear model: w_i * (x_i - E[x_i])
+        shap_values = (X_array - mean_X) * coefs
+        intercept = float(model.intercept_[0]) if hasattr(model.intercept_, "__len__") else float(model.intercept_)
+        base_value = float(intercept + np.dot(mean_X, coefs))
+    else:
+        try:
+            import shap
+            explainer = shap.LinearExplainer(model, X_array)
+            shap_values = explainer.shap_values(X_array)
+            base_value = float(explainer.expected_value)
+        except Exception:
             return {"error": "Cannot generate explanations for this model type"}
+
 
     # Global feature importance (mean absolute SHAP value)
     mean_abs = np.abs(shap_values).mean(axis=0)
