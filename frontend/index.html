@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AutoAnalytics — Autonomous Data Analytics Agent</title>
-  <meta name="description" content="Evidence-grounded, privacy-aware autonomous data analytics and conversational intelligence.">
+  <title>AutoAnalytics — Autonomous AI Data Analyst</title>
+  <meta name="description" content="AI-first conversational data analyst. Upload any dataset, ask natural language questions, and uncover evidence-grounded insights.">
   
-  <!-- Typography (Google Fonts) -->
+  <!-- Typography (Inter, JetBrains Mono, Outfit) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
   
-  <!-- Chart.js for Minimal Reactive Visualizations -->
+  <!-- Chart.js for Visualizations -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <!-- App Stylesheet -->
@@ -19,115 +19,223 @@
 </head>
 <body>
 
-  <div class="app-container">
+  <div class="app-layout">
     
-    <!-- ── Left Navigation Sidebar ────────────────────────────── -->
-    <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-icon">⚡</div>
-        <span class="brand-name">AutoAnalytics</span>
+    <!-- ── Top Header Navigation ─────────────────────────────────── -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="brand" onclick="switchMainTab('chat')">
+          <div class="brand-icon">⚡</div>
+          <span class="brand-name">AutoAnalytics</span>
+          <span class="badge-ai">AI Analyst</span>
+        </div>
+
+        <!-- Primary Navigation Switcher -->
+        <nav class="main-nav">
+          <button class="nav-tab active" id="tab-btn-chat" onclick="switchMainTab('chat')">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg>
+            <span>AI Analyst</span>
+          </button>
+          <button class="nav-tab" id="tab-btn-advanced" onclick="switchMainTab('advanced')">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            <span>Advanced Analytics</span>
+          </button>
+        </nav>
       </div>
 
-      <nav class="nav-menu">
-        <div class="nav-item active" id="nav-overview" onclick="switchView('overview')">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-          </svg>
-          Overview
+      <div class="header-right">
+        <!-- Active Dataset Pill (Shown when dataset is loaded) -->
+        <div class="dataset-pill" id="header-dataset-pill" style="display: none;">
+          <div class="dataset-dot"></div>
+          <span class="dataset-name" id="header-dataset-name">dataset.csv</span>
+          <span class="dataset-meta" id="header-dataset-meta">0 rows</span>
+          <button class="btn-icon-pill" onclick="triggerFileInput()" title="Upload a different dataset">↻ Replace</button>
         </div>
 
-        <div class="nav-item" id="nav-copilot" onclick="switchView('copilot')">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-          </svg>
-          AI Copilot
-        </div>
+        <!-- Hidden Global File Input -->
+        <input type="file" id="global-file-input" accept=".csv,.xlsx,.xls,.json" style="display:none;" onchange="handleFileSelected(event)">
 
-        <div class="nav-item" id="nav-predict" onclick="switchView('predict')">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-          </svg>
-          Predictive & SHAP
-        </div>
-
-        <div class="nav-item" id="nav-dataset" onclick="switchView('dataset')">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
-          </svg>
-          Dataset & Privacy
-        </div>
-
-        <div class="nav-item" id="nav-sql" onclick="switchView('sql')">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
-          </svg>
-          SQL Studio
-        </div>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div class="privacy-badge" id="sidebar-privacy-badge">
-          <div class="privacy-dot"></div>
-          <span id="privacy-status-text">STRICT PRIVACY</span>
+        <!-- Privacy Badge -->
+        <div class="privacy-badge" title="STRICT Privacy: Zero raw tabular row exposure to LLM">
+          <span class="privacy-dot"></span>
+          <span>STRICT PRIVACY</span>
         </div>
       </div>
-    </aside>
+    </header>
 
-    <!-- ── Main Workspace ────────────────────────────────────── -->
-    <div class="main-wrapper">
-      
-      <!-- Top Header -->
-      <header class="top-header">
-        <div class="header-left">
-          <h1 class="view-title" id="current-view-title">Executive Overview</h1>
-          <div class="dataset-indicator" id="header-dataset-indicator">
-            <span class="privacy-dot"></span>
-            <span id="active-dataset-name">sample_ecommerce.csv (1,000 rows)</span>
+    <!-- ── Main Workspace Body ───────────────────────────────────── -->
+    <main class="main-body">
+
+      <!-- ======================================================== -->
+      <!-- VIEW 1: AI Analyst Chat & Upload Primary Workspace        -->
+      <!-- ======================================================== -->
+      <section id="view-chat-workspace" class="workspace-view active-view">
+        
+        <!-- Hero & Upload Dropzone -->
+        <div class="hero-section" id="hero-upload-container">
+          <div class="hero-text-block">
+            <h1 class="hero-title">Talk to your data. <span class="highlight-gradient">Get answers.</span></h1>
+            <p class="hero-subtitle">Upload a dataset and let your AI analyst uncover insights, trends, patterns and opportunities.</p>
+          </div>
+
+          <!-- Central Dropzone Card -->
+          <div class="upload-dropzone" id="upload-dropzone" 
+               ondragover="handleDragOver(event)" 
+               ondragleave="handleDragLeave(event)" 
+               ondrop="handleFileDrop(event)"
+               onclick="triggerFileInput()">
+            
+            <div class="upload-icon-wrapper">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            </div>
+            <div class="upload-main-text">Drop your dataset here</div>
+            <div class="upload-sub-text">CSV · XLSX · JSON</div>
+            
+            <button class="btn btn-primary upload-btn" type="button" onclick="event.stopPropagation(); triggerFileInput();">
+              <span>+ Add Dataset</span>
+            </button>
+
+            <div class="upload-loading-overlay" id="upload-loading-overlay" style="display: none;">
+              <div class="spinner"></div>
+              <div class="loading-text" id="upload-status-text">Analyzing dataset structure & computing evidence...</div>
+            </div>
           </div>
         </div>
 
-        <div class="header-right">
-          <select id="privacy-tier-select" class="btn btn-secondary btn-sm" onchange="changePrivacyMode(this.value)">
-            <option value="STRICT" selected>🔒 STRICT (Zero Row Exposure)</option>
-            <option value="STANDARD">🛡️ STANDARD (Safe Aggregates)</option>
-            <option value="FULL">🔓 FULL (Opt-In Debugging)</option>
-          </select>
-          <button class="btn btn-primary btn-sm" onclick="triggerUploadModal()">
-            <span>+ Upload Dataset</span>
-          </button>
+        <!-- Active Dataset Compact Bar (Shown once dataset is ready) -->
+        <div class="active-dataset-banner" id="active-dataset-banner" style="display: none;">
+          <div class="dataset-info-group">
+            <span class="file-icon">📊</span>
+            <div>
+              <div class="dataset-title-text" id="banner-dataset-name">dataset.csv</div>
+              <div class="dataset-subtitle-text" id="banner-dataset-meta">Ready for conversational queries</div>
+            </div>
+          </div>
+          <div class="dataset-actions-group">
+            <button class="btn btn-secondary btn-sm" onclick="switchMainTab('advanced')">Open Advanced Analytics →</button>
+            <button class="btn btn-ghost btn-sm" onclick="triggerFileInput()">Upload New Dataset</button>
+          </div>
         </div>
-      </header>
 
-      <!-- Content Area -->
-      <main class="content-body">
+        <!-- Conversational Chat Container (Directly on first screen) -->
+        <div class="chat-section">
+          <div class="chat-card">
+            
+            <!-- Chat Header -->
+            <div class="chat-card-header">
+              <div class="chat-header-title">
+                <div class="bot-avatar">🤖</div>
+                <div>
+                  <div class="agent-name">AutoAnalytics AI</div>
+                  <div class="agent-sub">Evidence-Grounded Data Analyst</div>
+                </div>
+              </div>
+              <div class="chat-header-actions">
+                <button class="btn-clear" onclick="clearChatHistory()" title="Clear Chat Stream">Clear Chat</button>
+              </div>
+            </div>
+
+            <!-- Messages Stream -->
+            <div class="chat-messages" id="chat-messages-container">
+              
+              <!-- Initial Welcome Message -->
+              <div class="chat-msg msg-agent">
+                <div class="msg-avatar">🤖</div>
+                <div class="msg-bubble">
+                  <p><strong>Hi! I'm your AI data analyst.</strong></p>
+                  <p>Upload a dataset and I'll help you understand it, find important patterns and answer questions in plain English.</p>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Suggested Prompt Chips -->
+            <div class="prompt-chips" id="prompt-chips-container">
+              <button class="chip" onclick="sendPrompt('What can you tell me about this dataset?')">📊 What can you tell me about this dataset?</button>
+              <button class="chip" onclick="sendPrompt('Find unusual patterns')">🔎 Find unusual patterns</button>
+              <button class="chip" onclick="sendPrompt('What are my biggest opportunities?')">💡 What are my biggest opportunities?</button>
+              <button class="chip" onclick="sendPrompt('What are my top 5 products?')">🏆 What are my top 5 products?</button>
+            </div>
+
+            <!-- Input Bar -->
+            <div class="chat-input-bar">
+              <div class="input-container">
+                <input type="text" id="chat-input" 
+                       placeholder="Ask anything about your data... (e.g. 'What are my top 5 products?')" 
+                       onkeydown="handleChatKeydown(event)">
+                <button class="btn-send" id="btn-send-chat" onclick="handleSendChat()" title="Send Question">
+                  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ======================================================== -->
+      <!-- VIEW 2: Advanced Analytics Workspace                      -->
+      <!-- ======================================================== -->
+      <section id="view-advanced-workspace" class="workspace-view" style="display: none;">
         
-        <!-- 1. Overview Dashboard View -->
-        <section id="view-overview" class="view-section active-view">
+        <!-- Advanced Workspace Header Banner -->
+        <div class="advanced-banner">
+          <div class="advanced-banner-left">
+            <button class="btn btn-secondary btn-sm" onclick="switchMainTab('chat')">
+              ← Back to AI Analyst Chat
+            </button>
+            <span class="advanced-title">Advanced Technical Analytics</span>
+          </div>
+
+          <!-- Secondary Tabs inside Advanced Analytics -->
+          <div class="advanced-tabs">
+            <button class="adv-tab active" id="adv-tab-overview" onclick="switchAdvTab('overview')">Executive Overview</button>
+            <button class="adv-tab" id="adv-tab-predictive" onclick="switchAdvTab('predictive')">Predictive & SHAP</button>
+            <button class="adv-tab" id="adv-tab-dataset" onclick="switchAdvTab('dataset')">Dataset & Privacy</button>
+            <button class="adv-tab" id="adv-tab-sql" onclick="switchAdvTab('sql')">SQL Studio</button>
+          </div>
+        </div>
+
+        <!-- Empty State Notice for Advanced Analytics (if no dataset loaded) -->
+        <div id="adv-empty-notice" class="adv-empty-box" style="display: none;">
+          <div class="empty-icon">📂</div>
+          <div class="empty-title">No Dataset Loaded</div>
+          <div class="empty-subtitle">Please upload a dataset first in the AI Analyst workspace to generate advanced analytics, forecasts, and SHAP explanations.</div>
+          <button class="btn btn-primary btn-sm" onclick="switchMainTab('chat')">Go to Upload</button>
+        </div>
+
+        <!-- 1. Executive Overview Sub-View -->
+        <div id="adv-subview-overview" class="adv-subview active-subview">
           
           <!-- KPI Metrics Row -->
           <div class="kpi-grid">
             <div class="kpi-card">
               <div class="kpi-label">Total Revenue</div>
-              <div class="kpi-value" id="kpi-revenue">Rs.35.12M</div>
-              <div class="kpi-trend">↑ 12.4% vs baseline</div>
+              <div class="kpi-value" id="kpi-revenue">—</div>
+              <div class="kpi-trend" id="kpi-revenue-sub">Ingested Dataset</div>
             </div>
 
             <div class="kpi-card">
               <div class="kpi-label">Avg Order Value</div>
-              <div class="kpi-value" id="kpi-aov">Rs.36,202</div>
-              <div class="kpi-trend" style="color: var(--accent-secondary)">• Across 970 orders</div>
+              <div class="kpi-value" id="kpi-aov">—</div>
+              <div class="kpi-trend" id="kpi-aov-sub">Across Cleaned Orders</div>
             </div>
 
             <div class="kpi-card">
               <div class="kpi-label">Active Customers</div>
-              <div class="kpi-value" id="kpi-customers">198</div>
-              <div class="kpi-trend" style="color: var(--accent-primary)">• 100% profiled</div>
+              <div class="kpi-value" id="kpi-customers">—</div>
+              <div class="kpi-trend" id="kpi-customers-sub">Profiled Entities</div>
             </div>
 
             <div class="kpi-card">
               <div class="kpi-label">Predicted Churn Risk</div>
-              <div class="kpi-value" id="kpi-churn">43.4%</div>
-              <div class="kpi-trend" style="color: var(--accent-warning)">⚠ 86 customers at risk</div>
+              <div class="kpi-value" id="kpi-churn">—</div>
+              <div class="kpi-trend" id="kpi-churn-sub">ML Baseline Evaluation</div>
             </div>
           </div>
 
@@ -136,9 +244,9 @@
             <div class="card">
               <div class="card-header">
                 <h2 class="card-title">Revenue Trend & 90-Day Forecast</h2>
-                <span class="badge-impact" id="forecast-trend-badge">ARIMA Increasing Trend</span>
+                <span class="badge-impact" id="forecast-trend-badge">ARIMA Forecast</span>
               </div>
-              <div style="height: 260px;">
+              <div style="height: 250px;">
                 <canvas id="revenueForecastChart"></canvas>
               </div>
             </div>
@@ -147,321 +255,203 @@
               <div class="card-header">
                 <h2 class="card-title">Revenue by Category</h2>
               </div>
-              <div style="height: 260px;">
+              <div style="height: 250px;">
                 <canvas id="categoryRevenueChart"></canvas>
               </div>
             </div>
           </div>
 
-          <!-- Insights & Recommendations Row -->
-          <div class="grid-equal">
+          <!-- Automated LLM Insights & Recommendations -->
+          <div class="grid-2col" style="margin-top: 1.25rem;">
             <div class="card">
               <div class="card-header">
-                <h2 class="card-title">Grounded AI Business Insights</h2>
-                <span style="font-size: 0.75rem; color: var(--accent-success);">● Evidence-Verified</span>
+                <h2 class="card-title">Automated Business Insights</h2>
+                <span class="badge-impact">Evidence Grounded</span>
               </div>
               <div class="insights-list" id="insights-container">
-                <div class="insight-item">Electronics is the dominant revenue engine, accounting for over 49% of total company sales (Rs.17.20M).</div>
-                <div class="insight-item">West and East regions drive the highest purchasing volume, generating Rs.11.15M and Rs.8.45M respectively.</div>
-                <div class="insight-item">Customer recency is the strongest leading indicator of customer churn, with 86 accounts exceeding 60-day inactivity.</div>
+                <div class="insight-item">Upload a dataset to generate automated business insights.</div>
               </div>
             </div>
 
             <div class="card">
               <div class="card-header">
-                <h2 class="card-title">Strategic Action Recommendations</h2>
-                <span style="font-size: 0.75rem; color: var(--accent-secondary);">Prioritized</span>
+                <h2 class="card-title">Strategic Recommendations</h2>
+                <span class="badge-impact">Actionable</span>
               </div>
               <div class="insights-list" id="recommendations-container">
-                <div class="recommendation-item">
-                  <div>
-                    <strong>Re-engage At-Risk Customer Segment</strong>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Deploy targeted loyalty incentives for high recency accounts.</div>
-                  </div>
-                  <span class="badge-impact">+Rs.4.2M Impact</span>
-                </div>
-                <div class="recommendation-item">
-                  <div>
-                    <strong>Optimize Inventory for Electronics</strong>
-                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Align supply chain for top-selling SKUs to avoid stockouts.</div>
-                  </div>
-                  <span class="badge-impact">+Rs.2.8M Impact</span>
-                </div>
+                <div class="insight-item">Upload a dataset to generate strategic recommendations.</div>
               </div>
             </div>
           </div>
 
-        </section>
+        </div>
 
-        <!-- 2. Live AI Copilot View -->
-        <section id="view-copilot" class="view-section">
-          <div class="chat-container">
-            
-            <!-- Chat Pane -->
-            <div class="chat-pane">
-              <div class="quick-prompts">
-                <button class="prompt-pill" onclick="sendQuickPrompt('What is total revenue broken down by product category?')">💰 Revenue by Category</button>
-                <button class="prompt-pill" onclick="sendQuickPrompt('Which customers are at risk of churning and why?')">⚠️ Churn Risk Diagnosis</button>
-                <button class="prompt-pill" onclick="sendQuickPrompt('Forecast revenue for the next 90 days.')">📈 90-Day Forecast</button>
-                <button class="prompt-pill" onclick="sendQuickPrompt('Show revenue breakdown across regions.')">🗺️ Regional Sales</button>
-              </div>
-
-              <div class="chat-messages" id="chat-messages-container">
-                <div class="message agent">
-                  <div class="message-avatar">AI</div>
-                  <div class="message-bubble">
-                    Hello! I am your <strong>AutoAnalytics Autonomous Agent</strong>. You can ask any question about your data in plain English. I construct verifiable analytical plans, execute sandboxed code, and substantiate every claim with traceable evidence.
-                  </div>
-                </div>
-              </div>
-
-              <div class="chat-input-bar">
-                <input type="text" id="chat-user-input" class="chat-input" placeholder="Ask any analytical question..." onkeydown="handleChatKeydown(event)">
-                <button class="btn btn-primary" id="btn-send-chat" onclick="sendChatMessage()">
-                  <span>Send</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Agent Trace & Provenance Drawer -->
-            <aside class="trace-drawer">
-              <div class="trace-header">
-                <h3 class="card-title" style="font-size: 0.85rem;">Agent Reasoning Trace</h3>
-                <span class="privacy-badge" style="font-size: 0.65rem; padding: 0.2rem 0.4rem;">Grounded</span>
-              </div>
-
-              <div class="trace-content" id="trace-steps-container">
-                <div class="trace-step">
-                  <div class="step-indicator done">✓</div>
-                  <div>
-                    <div style="font-weight: 600; color: var(--text-primary);">Task Understanding</div>
-                    <div style="color: var(--text-muted);">Decomposed goal into structured intent & requested metrics.</div>
-                  </div>
-                </div>
-
-                <div class="trace-step">
-                  <div class="step-indicator done">✓</div>
-                  <div>
-                    <div style="font-weight: 600; color: var(--text-primary);">Privacy Layer (STRICT)</div>
-                    <div style="color: var(--text-muted);">Zero raw tabular records exposed to LLM context.</div>
-                  </div>
-                </div>
-
-                <div class="trace-step">
-                  <div class="step-indicator done">✓</div>
-                  <div>
-                    <div style="font-weight: 600; color: var(--text-primary);">Analytical Plan Validated</div>
-                    <div style="color: var(--text-muted);">Dependency-ordered execution DAG verified.</div>
-                  </div>
-                </div>
-
-                <div class="trace-step">
-                  <div class="step-indicator done">✓</div>
-                  <div>
-                    <div style="font-weight: 600; color: var(--text-primary);">Sandboxed Execution</div>
-                    <div style="color: var(--text-muted);">AST security passed. Runtime: 14.2ms.</div>
-                  </div>
-                </div>
-
-                <div class="trace-step">
-                  <div class="step-indicator done">✓</div>
-                  <div>
-                    <div style="font-weight: 600; color: var(--text-primary);">Evidence Validated</div>
-                    <div style="color: var(--text-muted);">0 causal overreach errors. Traceability established.</div>
-                  </div>
-                </div>
-              </div>
-            </aside>
-
-          </div>
-        </section>
-
-        <!-- 3. Predictive & Explainable AI (SHAP) View -->
-        <section id="view-predict" class="view-section">
+        <!-- 2. Predictive & SHAP Sub-View -->
+        <div id="adv-subview-predictive" class="adv-subview" style="display: none;">
           
-          <div class="grid-equal">
-            <!-- Global SHAP Feature Importance -->
+          <div class="grid-2col">
             <div class="card">
               <div class="card-header">
-                <h2 class="card-title">Global SHAP Churn Drivers</h2>
+                <h2 class="card-title">Global SHAP Feature Importance</h2>
                 <span class="badge-impact">LinearExplainer</span>
               </div>
+              <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">
+                Mean absolute Shapley value attribution across all customer records.
+              </p>
               <div style="height: 240px;">
                 <canvas id="shapGlobalChart"></canvas>
               </div>
             </div>
 
-            <!-- Customer Explanation Modal / Card -->
-            <div class="card" id="customer-explain-card">
+            <div class="card">
               <div class="card-header">
-                <h2 class="card-title">Customer Diagnosis (SHAP)</h2>
-                <span id="explain-cust-badge" class="badge-impact">Select Customer</span>
+                <h2 class="card-title">Customer Diagnosis & SHAP Explanation</h2>
+                <span class="badge-impact" id="explain-cust-badge">CUST-1042</span>
               </div>
-              <div id="customer-explain-content" style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.6;">
-                Click <strong>"Explain"</strong> on any customer in the table below to view personalized feature contributions.
+              <div id="customer-explain-content" style="font-size: 0.85rem; line-height: 1.6;">
+                <p style="color: var(--text-muted);">Select a customer or type a Customer ID to inspect individual churn drivers.</p>
+                <div class="quick-cust-row">
+                  <button class="chip" onclick="explainCustomer('CUST-1042')">Inspect CUST-1042</button>
+                  <button class="chip" onclick="explainCustomer('CUST-1088')">Inspect CUST-1088</button>
+                  <button class="chip" onclick="explainCustomer('CUST-1120')">Inspect CUST-1120</button>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- At-Risk Customers Table -->
-          <div class="card" style="margin-top: 1.5rem;">
-            <div class="card-header">
-              <h2 class="card-title">Customer Churn Risk Registry</h2>
-              <span style="font-size: 0.75rem; color: var(--text-muted);">Logistic Regression • Stratified Split</span>
-            </div>
+        </div>
 
-            <div class="data-table-wrapper">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Customer ID</th>
-                    <th>Recency (Days)</th>
-                    <th>Orders</th>
-                    <th>Total Spend</th>
-                    <th>Churn Probability</th>
-                    <th>Status</th>
-                    <th>Action</th>
-                  </tr>
-                </thead>
-                <tbody id="churn-table-body">
-                  <tr>
-                    <td><code>CUST_0002</code></td>
-                    <td>78.0</td>
-                    <td>3</td>
-                    <td>Rs.147,841.91</td>
-                    <td><span style="color: var(--accent-danger); font-weight: 600;">100.0%</span></td>
-                    <td><span class="badge-impact" style="background: rgba(239, 68, 68, 0.15); color: var(--accent-danger); border-color: rgba(239, 68, 68, 0.3);">High Risk</span></td>
-                    <td><button class="btn btn-secondary btn-sm" onclick="explainCustomer('CUST_0002')">Explain</button></td>
-                  </tr>
-                  <tr>
-                    <td><code>CUST_0005</code></td>
-                    <td>65.0</td>
-                    <td>4</td>
-                    <td>Rs.189,204.00</td>
-                    <td><span style="color: var(--accent-danger); font-weight: 600;">100.0%</span></td>
-                    <td><span class="badge-impact" style="background: rgba(239, 68, 68, 0.15); color: var(--accent-danger); border-color: rgba(239, 68, 68, 0.3);">High Risk</span></td>
-                    <td><button class="btn btn-secondary btn-sm" onclick="explainCustomer('CUST_0005')">Explain</button></td>
-                  </tr>
-                  <tr>
-                    <td><code>CUST_0001</code></td>
-                    <td>27.0</td>
-                    <td>7</td>
-                    <td>Rs.164,488.07</td>
-                    <td><span style="color: var(--accent-success); font-weight: 600;">0.0%</span></td>
-                    <td><span class="badge-impact" style="background: rgba(16, 185, 129, 0.15); color: var(--accent-success); border-color: rgba(16, 185, 129, 0.3);">Retained</span></td>
-                    <td><button class="btn btn-secondary btn-sm" onclick="explainCustomer('CUST_0001')">Explain</button></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-        </section>
-
-        <!-- 4. Dataset & Privacy Studio View -->
-        <section id="view-dataset" class="view-section">
+        <!-- 3. Dataset & Privacy Sub-View -->
+        <div id="adv-subview-dataset" class="adv-subview" style="display: none;">
           
-          <div class="grid-equal">
-            <!-- Upload Box -->
-            <div class="card">
-              <div class="card-header">
-                <h2 class="card-title">Upload Dataset</h2>
-              </div>
-              <div class="dropzone" onclick="document.getElementById('file-upload-input').click()">
-                <div class="dropzone-icon">📁</div>
-                <div style="font-weight: 600; margin-bottom: 0.25rem;">Click to upload or drag and drop</div>
-                <div style="font-size: 0.75rem; color: var(--text-muted);">Supports CSV, Excel (.xlsx), and JSON datasets</div>
-                <input type="file" id="file-upload-input" style="display: none;" onchange="handleFileUpload(event)">
-              </div>
-            </div>
-
-            <!-- Privacy Tier Info -->
-            <div class="card">
-              <div class="card-header">
-                <h2 class="card-title">Privacy & Data Protection Policy</h2>
-              </div>
-              <div style="font-size: 0.85rem; color: #cbd5e1; display: flex; flex-direction: column; gap: 0.75rem;">
-                <div style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.2); padding: 0.75rem; border-radius: var(--radius-md);">
-                  <strong style="color: var(--accent-success);">STRICT Mode Active</strong>
-                  <p style="font-size: 0.775rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                    Zero raw dataframe records are transmitted to the LLM. The agent reasons strictly from schema definitions, statistical aggregates (mean, IQR, quantiles), and sandboxed execution outputs.
-                  </p>
-                </div>
-                <div style="font-size: 0.775rem; color: var(--text-muted);">
-                  • Local Sandboxing: Code executes strictly in an isolated in-memory Python runtime.<br>
-                  • AST Safety Scanning: Unsafe system and filesystem calls are automatically intercepted.<br>
-                  • PII Masking: Identifier attributes and sensitive fields are sanitized.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Dataset Schema Card -->
-          <div class="card" style="margin-top: 1.5rem;">
+          <div class="card" style="margin-bottom: 1.25rem;">
             <div class="card-header">
-              <h2 class="card-title">Schema & Profile Information</h2>
-              <span id="schema-rows-cols" style="font-size: 0.75rem; color: var(--text-muted);">1,000 Rows • 12 Columns</span>
+              <h2 class="card-title">Privacy Shield Configuration</h2>
             </div>
-
-            <div class="data-table-wrapper">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Column Name</th>
-                    <th>Data Type</th>
-                    <th>Null Count</th>
-                    <th>Unique Count</th>
-                    <th>Semantic Category</th>
-                  </tr>
-                </thead>
-                <tbody id="schema-table-body">
-                  <tr><td><code>order_id</code></td><td>object</td><td>0</td><td>1000</td><td>Identifier</td></tr>
-                  <tr><td><code>customer_id</code></td><td>object</td><td>0</td><td>198</td><td>Identifier</td></tr>
-                  <tr><td><code>order_date</code></td><td>datetime64[ns]</td><td>0</td><td>364</td><td>Datetime</td></tr>
-                  <tr><td><code>revenue</code></td><td>float64</td><td>0</td><td>950</td><td>Numeric Metric</td></tr>
-                  <tr><td><code>product_category</code></td><td>object</td><td>0</td><td>5</td><td>Categorical Dimension</td></tr>
-                </tbody>
-              </table>
-            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+              AutoAnalytics enforces differential privacy tiers to protect raw tabular records.
+            </p>
+            <select id="privacy-tier-select" class="btn btn-secondary btn-sm" onchange="changePrivacyMode(this.value)">
+              <option value="STRICT" selected>🔒 STRICT (Zero Row Exposure — Aggregates Only)</option>
+              <option value="STANDARD">🛡️ STANDARD (Safe Groupings & Profiles)</option>
+              <option value="FULL">🔓 FULL (Opt-In Local Debugging)</option>
+            </select>
           </div>
 
-        </section>
-
-        <!-- 5. SQL Studio View -->
-        <section id="view-sql" class="view-section">
           <div class="card">
             <div class="card-header">
-              <h2 class="card-title">Read-Only SQL Query Studio</h2>
-              <button class="btn btn-primary btn-sm" onclick="executeCustomSql()">Execute Query</button>
+              <h2 class="card-title">Dataset Schema & Cleaning Report</h2>
             </div>
-            
-            <textarea id="sql-editor" style="width: 100%; height: 100px; background: var(--bg-secondary); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); color: var(--text-primary); font-family: var(--font-mono); font-size: 0.85rem; padding: 0.85rem; outline: none;" placeholder="SELECT product_category, SUM(revenue) AS total_rev FROM dataset GROUP BY product_category ORDER BY total_rev DESC LIMIT 5;">SELECT product_category, SUM(revenue) AS total_revenue, AVG(revenue) AS avg_revenue FROM dataset GROUP BY product_category ORDER BY total_revenue DESC;</textarea>
-
-            <div class="data-table-wrapper" style="margin-top: 1.25rem;">
-              <div id="sql-result-wrapper">
-                <table class="data-table">
-                  <thead>
-                    <tr><th>product_category</th><th>total_revenue</th><th>avg_revenue</th></tr>
-                  </thead>
-                  <tbody>
-                    <tr><td>Electronics</td><td>17203651.57</td><td>34407.30</td></tr>
-                    <tr><td>Home & Kitchen</td><td>9141076.10</td><td>45705.38</td></tr>
-                    <tr><td>Sports</td><td>5166844.33</td><td>25834.22</td></tr>
-                    <tr><td>Clothing</td><td>2509036.39</td><td>12545.18</td></tr>
-                    <tr><td>Books</td><td>1096105.49</td><td>5480.53</td></tr>
-                  </tbody>
-                </table>
-              </div>
+            <div class="table-wrapper" id="dataset-schema-table">
+              <p style="font-size: 0.85rem; color: var(--text-muted);">Upload a dataset to view its column schema and data quality report.</p>
             </div>
           </div>
-        </section>
 
-      </main>
+        </div>
+
+        <!-- 4. SQL Studio Sub-View -->
+        <div id="adv-subview-sql" class="adv-subview" style="display: none;">
+          
+          <div class="card" style="margin-bottom: 1.25rem;">
+            <div class="card-header">
+              <h2 class="card-title">Read-Only SQL Studio</h2>
+              <button class="btn btn-primary btn-sm" onclick="executeCustomSql()">▶ Run Query</button>
+            </div>
+            <textarea id="sql-editor" class="sql-textarea" rows="4">SELECT category, COUNT(*) as orders, ROUND(SUM(total_amount), 2) as revenue FROM transactions GROUP BY category ORDER BY revenue DESC;</textarea>
+            
+            <div class="sql-preset-chips" style="margin-top: 0.75rem;">
+              <span style="font-size: 0.75rem; color: var(--text-muted);">Presets:</span>
+              <button class="chip" onclick="setSqlPreset('SELECT category, SUM(total_amount) as rev FROM transactions GROUP BY category ORDER BY rev DESC;')">Revenue by Category</button>
+              <button class="chip" onclick="setSqlPreset('SELECT customer_id, COUNT(*) as orders, SUM(total_amount) as spent FROM transactions GROUP BY customer_id ORDER BY spent DESC LIMIT 10;')">Top 10 Customers</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title">Query Results</h2>
+            </div>
+            <div class="table-wrapper" id="sql-result-wrapper">
+              <div style="color: var(--text-muted); font-size: 0.85rem;">Click 'Run Query' to execute safe read-only SQL on SQLite database.</div>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- ── Slide-Out Drawer: Analysis Details ────────────────────── -->
+    <div class="drawer-backdrop" id="analysis-drawer-backdrop" onclick="closeAnalysisDrawer()"></div>
+    <div class="analysis-drawer" id="analysis-drawer">
+      <div class="drawer-header">
+        <div class="drawer-title">
+          <span>🔍</span>
+          <span>Analysis Execution Details</span>
+        </div>
+        <button class="btn-close-drawer" onclick="closeAnalysisDrawer()">✕</button>
+      </div>
+      
+      <div class="drawer-body">
+        <div class="drawer-summary">
+          <div class="meta-item">
+            <span class="meta-label">Task Intent</span>
+            <span class="meta-val" id="drawer-intent-tag">SQL Query</span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Privacy Shield</span>
+            <span class="meta-val tag-success">STRICT Verified</span>
+          </div>
+        </div>
+
+        <div class="trace-checklist">
+          <div class="trace-item done">
+            <div class="trace-icon">✓</div>
+            <div class="trace-info">
+              <div class="trace-name">Task Understood</div>
+              <div class="trace-desc" id="drawer-task-desc">Query classified and mapped to analytics domain.</div>
+            </div>
+          </div>
+          <div class="trace-item done">
+            <div class="trace-icon">✓</div>
+            <div class="trace-info">
+              <div class="trace-name">Relevant Data Identified</div>
+              <div class="trace-desc" id="drawer-data-desc">Mapped to database schema tables & columns.</div>
+            </div>
+          </div>
+          <div class="trace-item done">
+            <div class="trace-icon">✓</div>
+            <div class="trace-info">
+              <div class="trace-name">Analysis Executed</div>
+              <div class="trace-desc" id="drawer-exec-desc">Executed safely in isolated read-only engine.</div>
+            </div>
+          </div>
+          <div class="trace-item done">
+            <div class="trace-icon">✓</div>
+            <div class="trace-info">
+              <div class="trace-name">Evidence Collected</div>
+              <div class="trace-desc" id="drawer-evidence-desc">Results extracted & verified against dataset.</div>
+            </div>
+          </div>
+          <div class="trace-item done">
+            <div class="trace-icon">✓</div>
+            <div class="trace-info">
+              <div class="trace-name">Result Validated</div>
+              <div class="trace-desc">Response grounded strictly on computed data.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="drawer-code-section" id="drawer-sql-container" style="display:none;">
+          <div class="section-label">Safe SQL Generated & Executed:</div>
+          <pre class="sql-code-block"><code id="drawer-sql-code">SELECT ...</code></pre>
+        </div>
+      </div>
     </div>
 
   </div>
 
-  <!-- App Script -->
+  <!-- Application Logic -->
   <script src="app.js"></script>
 </body>
 </html>
