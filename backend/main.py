@@ -462,3 +462,12 @@ async def get_db_schema():
 
     schema = get_schema(db_path)
     return schema
+
+
+# ── Static Frontend Mounting ──────────────────────────────────────
+
+frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
+if os.path.exists(frontend_dir):
+    from fastapi.staticfiles import StaticFiles
+    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+
